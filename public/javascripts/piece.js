@@ -1,15 +1,17 @@
 var block_size = 25;
 
-function Piece(piece_array,x,y,paper) {
+function Piece(piece_array,x,y,paper,board) {
   var p = this;
   p.blocks = [];
-  p.selected = false;
+  p.placed = false;
   p.mousemove = function(e){
     var board = $('#board');
-    if(p.selected){
-      x = Math.floor((e.pageX - board.offset().left)/block_size);
-      y = Math.floor((e.pageY - board.offset().top)/block_size);
+    x = Math.floor((e.pageX - board.offset().left)/block_size);
+    y = Math.floor((e.pageY - board.offset().top)/block_size);
+    if(y <= 20){
       p.moveAbsolute([x,y]);
+    }else{
+      p.moveAbsolute([9,23]);
     }
   }
 
@@ -17,22 +19,7 @@ function Piece(piece_array,x,y,paper) {
   p.drawBlock = function(coordinates){
     var block = paper.rect((x+coordinates[0])*block_size,(y+coordinates[1])*block_size,block_size,block_size).attr({fill: '#0f0'});
     block.click(function(){
-      //If valid, drop it there, otherwise, send it back
-      if(p.selected){
-        //Color it back
-        for(var i = 0; i < p.blocks.length; i++){
-          p.blocks[i].attr({fill: '#0f0'});
-        }
-        //If valid, leave it there, otherwise put it back
-        if(true){
-          p.moveAbsolute([9,23]);
-        }
-      }else{
-        for(var i = 0; i < p.blocks.length; i++){
-          p.blocks[i].attr({fill: '#f00'});
-        }
-      }
-      p.selected = !p.selected;
+      //Rotate
     });
     p.blocks.push(block);
   }
@@ -58,9 +45,11 @@ function Piece(piece_array,x,y,paper) {
   }
 
   p.deletePiece = function(){
-    for(var i = 0; i < p.blocks.length; i++){
+    if(!p.placed){
+      for(var i = 0; i < p.blocks.length; i++){
         p.blocks[i].remove();
       }
+    }
     $('#board').off('mousemove');
   }
 }
