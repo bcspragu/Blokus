@@ -4,6 +4,8 @@ var block_size = 25;
 var avail_pieces = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20];
 var current_piece;
 var current_piece_index = 20;
+var pointer = {x: 10, y: 10};
+var pointer_piece;
 
 //The pieces are stored as an array of x,y coordinates
 var pieces = [
@@ -43,26 +45,49 @@ $(function(){
   //90 - z
   //88 - x
   $(document).keydown(function(e){
-    var offset = {x: 0, y: 0};
-    switch(e.which){
-      case 37:
-        offset.x = -1;
-      case 39:
-        offset.x = 1;
-      case 38:
-        offset.y = -1;
-      case 40:
-        offset.y = 1;
+    if(typeof current_piece !== 'undefined'){
+      var offset = {x: 0, y: 0};
+      switch(e.which){
+        case 37:
+          offset.x = -1;
+          break;
+        case 39:
+          offset.x = 1;
+          break;
+        case 38:
+          offset.y = -1;
+          break;
+        case 40:
+          offset.y = 1;
+          break;
+        case 32:
+          var index = avail_pieces.indexOf(current_piece_index);
+
+          if (index > -1) {
+            //Make that not an available piece
+            avail_pieces.splice(index, 1);
+            if(avail_pieces.length > 0){
+              current_piece_index = avail_pieces[(index+1) % avail_pieces.length];
+              current_piece = new Piece(pieces[current_piece_index],pointer,paper);
+              pointer_piece.blocks[0].toFront();
+            }else{
+              current_piece = undefined;
+            }
+          }
+          break;
+        case 90:
+          current_piece.rotateLeft();
+          break;
+        case 88:
+          current_piece.rotateRight();
+          break;
+      }
+      if(offset.x != 0 || offset.y != 0){
+        pointer.x += offset.x;
+        pointer.y += offset.y;
         current_piece.moveRelative(offset);
-        break;
-      case 32:
-        break;
-      case 90:
-        current_piece.rotateLeft();
-        break;
-      case 88:
-        current_piece.rotateRight();
-        break;
+        pointer_piece.moveRelative(offset);
+      }
     }
   });
   
@@ -73,13 +98,20 @@ $(function(){
     }
   }
   var index = 0;
-  current_piece = new Piece(pieces[current_piece_index],{x: 10, y: 10},paper);
+  current_piece = new Piece(pieces[current_piece_index],pointer,paper);
+  pointer_piece = new Piece([],pointer,paper);
+  pointer_piece.blocks[0].attr({fill: '#00f'}).toFront();
   paper.rect(0,20*block_size,block_size*20,200).attr({fill: '#f99'})
 
   var select_piece = function(direction){
     current_piece.deletePiece();
-    current_piece_index += direction;
-    current_piece = new Piece(pieces[current_piece_index % 21],{x: 10, y: 10},paper);
+    current_piece_index = (current_piece_index+direction) % avail_pieces.length
+    if(current_piece_index < 0){
+      current_piece_index += avail_pieces.length;
+    }
+    current_piece_index = avail_pieces[current_piece_index % avail_pieces.length];
+    current_piece = new Piece(pieces[current_piece_index],pointer,paper);
+    pointer_piece.blocks[0].toFront();
   }
 
   paper.path('M50,550L0,600L50,650L50,550').attr({fill: '#000'}).click(function(){
@@ -165,6 +197,20 @@ function Piece(piece_array,coor,paper,board) {
       var temp_x = piece_array[i].x;
       piece_array[i].x = piece_array[i].y;
       piece_array[i].y = temp_x*-1;
+    }
+    p.update();
+  }
+
+  p.flipHorizontal = function(){
+    for(var i = 0; i < piece_array.length; i++){
+      piece_array[i].x = piece_array[i].x*-1;
+    }
+    p.update();
+  }
+
+  p.flipVertical = function(){
+    for(var i = 0; i < piece_array.length; i++){
+      piece_array[i].y = piece_array[i].y*-1;
     }
     p.update();
   }
