@@ -34,6 +34,37 @@ $(function(){
   var socket = io.connect('http://localhost');
 
   paper =  Raphael("board", block_size*20, block_size*20+200);
+
+  //32 - space
+  //37 - left
+  //38 - up
+  //39 - right
+  //40 - down
+  //90 - z
+  //88 - x
+  $(document).keydown(function(e){
+    var offset = {x: 0, y: 0};
+    switch(e.which){
+      case 37:
+        offset.x = -1;
+      case 39:
+        offset.x = 1;
+      case 38:
+        offset.y = -1;
+      case 40:
+        offset.y = 1;
+        current_piece.moveRelative(offset);
+        break;
+      case 32:
+        break;
+      case 90:
+        current_piece.rotateLeft();
+        break;
+      case 88:
+        current_piece.rotateRight();
+        break;
+    }
+  });
   
   //Draw the grid
   for(var i = 0; i < 20; i++){
@@ -42,13 +73,13 @@ $(function(){
     }
   }
   var index = 0;
-  current_piece = new Piece(pieces[current_piece_index],{x: 9, y: 23},paper);
+  current_piece = new Piece(pieces[current_piece_index],{x: 10, y: 10},paper);
   paper.rect(0,20*block_size,block_size*20,200).attr({fill: '#f99'})
 
   var select_piece = function(direction){
     current_piece.deletePiece();
     current_piece_index += direction;
-    current_piece = new Piece(pieces[current_piece_index % 21],{x: 9, y: 23},paper);
+    current_piece = new Piece(pieces[current_piece_index % 21],{x: 10, y: 10},paper);
   }
 
   paper.path('M50,550L0,600L50,650L50,550').attr({fill: '#000'}).click(function(){
@@ -65,49 +96,33 @@ function Piece(piece_array,coor,paper,board) {
   var p = this;
   p.blocks = [];
   p.placed = false;
-  p.mousemove = function(e){
-    var board = $('#board');
-    x = Math.floor((e.pageX - board.offset().left)/block_size);
-    y = Math.floor((e.pageY - board.offset().top)/block_size);
-    if(y <= 20){
-      p.moveAbsolute({x: x, y: y});
-    }else{
-      p.moveAbsolute({x: 9, y: 23});
-    }
-  }
 
   $('#board').mousemove(p.mousemove);
 
   p.drawBlock = function(coordinates){
     var block = paper.rect((coor.x+coordinates.x)*block_size,(coor.y+coordinates.y)*block_size,block_size,block_size).attr({fill: '#0f0'});
-    block.click(p.rotate);
     block.data('x',coor.x+coordinates.x);
     block.data('y',coor.y+coordinates.y);
     p.blocks.push(block);
   }
 
   p.moveRelative = function(coordinates){
-    var offset;
+    var center = {x: p.blocks[0].data('x'), y: p.blocks[0].data('y')};
+    var offset = {x: 0, y: 0};
     for(var i = 0; i < p.blocks.length; i++){
-      if(i == 0){
-        offset = {x: 0, y: 0};
-      }else{
+      if(i != 0){
         offset = piece_array[i-1];
       }
-      x = p.blocks[i].attr('x');
-      y = p.blocks[i].attr('y');
-      p.blocks[i].attr({x: (x+coordinates.x+offset.x)*block_size, y: (y+coordinates.y+offset.y)*block_size});
-      p.blocks[i].data('x',x+coordinates.x+offset.x);
-      p.blocks[i].data('y',y+coordinates.y+offset.y);
+      p.blocks[i].attr({x: (center.x+offset.x+coordinates.x)*block_size, y: (center.y+offset.y+coordinates.y)*block_size});
+      p.blocks[i].data('x',center.x+offset.x+coordinates.x);
+      p.blocks[i].data('y',center.y+offset.y+coordinates.y);
     }
   }
 
   p.moveAbsolute = function(coordinates){
-    var offset;
+    var offset = {x: 0, y: 0};
     for(var i = 0; i < p.blocks.length; i++){
-      if(i == 0){
-        offset = {x: 0, y: 0};
-      }else{
+      if(i != 0){
         offset = piece_array[i-1];
       }
       p.blocks[i].attr({x: (coordinates.x+offset.x)*block_size, y: (coordinates.y+offset.y)*block_size});
@@ -118,13 +133,12 @@ function Piece(piece_array,coor,paper,board) {
 
   p.update = function(){
     var center = {x: p.blocks[0].data('x'), y: p.blocks[0].data('y')};
-    for(var i = 1; i < p.blocks.length; i++){
-      if(i == 0){
-        offset = {x: 0, y: 0};
-      }else{
+    var offset = {x: 0, y: 0};
+    for(var i = 0; i < p.blocks.length; i++){
+      if(i != 0){
         offset = piece_array[i-1];
       }
-      p.blocks[i].attr({x: (x+offset.x)*block_size, y: (y+offset.y)*block_size});
+      p.blocks[i].attr({x: (center.x+offset.x)*block_size, y: (center.y+offset.y)*block_size});
     }
   }
 
@@ -137,11 +151,20 @@ function Piece(piece_array,coor,paper,board) {
     $('#board').off('mousemove');
   }
 
-  p.rotate = function(){
+  p.rotateRight = function(){
     for(var i = 0; i < piece_array.length; i++){
       var temp_x = piece_array[i].x;
       piece_array[i].x = piece_array[i].y*-1;
       piece_array[i].y = temp_x;
+    }
+    p.update();
+  }
+
+  p.rotateLeft = function(){
+    for(var i = 0; i < piece_array.length; i++){
+      var temp_x = piece_array[i].x;
+      piece_array[i].x = piece_array[i].y;
+      piece_array[i].y = temp_x*-1;
     }
     p.update();
   }
