@@ -1,11 +1,20 @@
 var paper;
-var block_size = 25;
+var block_size;
 
 var avail_pieces = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20];
+var player_start_points = [
+  {x: 0, y:0},
+  {x: 19, y: 0},
+  {x: 19, y: 19},
+  {x: 0, y: 19}
+];
+
 var current_piece;
 var current_piece_index = 20;
 var pointer = {x: 10, y: 10};
 var pointer_piece;
+var player_id;
+var user_id;
 
 //The pieces are stored as an array of x,y coordinates
 var pieces = [
@@ -34,8 +43,12 @@ var pieces = [
 
 $(function(){
   var socket = io.connect('http://localhost');
-
-  paper =  Raphael("board", block_size*20, block_size*20+200);
+  var width = $('body').height();
+  width -= 20;
+  $('body').height(width);
+  block_size = width/20;
+  $('#board').css({'margin-top': '10px'}).width(width).height(width);
+  paper =  Raphael("board", width, width);
 
   //32 - space
   //37 - left
@@ -44,8 +57,9 @@ $(function(){
   //40 - down
   //90 - z
   //88 - x
+  //77 - m
+  //78 - n
   $(document).keydown(function(e){
-    if(typeof current_piece !== 'undefined'){
       var offset = {x: 0, y: 0};
       switch(e.which){
         case 37:
@@ -59,6 +73,12 @@ $(function(){
           break;
         case 40:
           offset.y = 1;
+          break;
+        case 86:
+          current_piece.flipVertical();
+          break;
+        case 72:
+          current_piece.flipHorizontal();
           break;
         case 32:
           var index = avail_pieces.indexOf(current_piece_index);
@@ -81,6 +101,12 @@ $(function(){
         case 88:
           current_piece.rotateRight();
           break;
+        case 77:
+          select_piece(1);
+          break;
+        case 78:
+          select_piece(-1);
+          break;
       }
       if(offset.x != 0 || offset.y != 0){
         pointer.x += offset.x;
@@ -88,8 +114,7 @@ $(function(){
         current_piece.moveRelative(offset);
         pointer_piece.moveRelative(offset);
       }
-    }
-  });
+    });
   
   //Draw the grid
   for(var i = 0; i < 20; i++){
@@ -101,7 +126,6 @@ $(function(){
   current_piece = new Piece(pieces[current_piece_index],pointer,paper);
   pointer_piece = new Piece([],pointer,paper);
   pointer_piece.blocks[0].attr({fill: '#00f'}).toFront();
-  paper.rect(0,20*block_size,block_size*20,200).attr({fill: '#f99'})
 
   var select_piece = function(direction){
     current_piece.deletePiece();
@@ -114,14 +138,10 @@ $(function(){
     pointer_piece.blocks[0].toFront();
   }
 
-  paper.path('M50,550L0,600L50,650L50,550').attr({fill: '#000'}).click(function(){
-    select_piece(-1);
+  socket.on('logged in',function(data){
+    player_id = data.player;
+    user_id = data.id;
   });
-
-  paper.path('M450,550L500,600L450,650L450,550').attr({fill: '#000'}).click(function(){
-    select_piece(1);
-  });
-
 });
 
 function Piece(piece_array,coor,paper,board) {

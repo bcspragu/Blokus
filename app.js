@@ -44,6 +44,7 @@ io.sockets.on('connection', function (socket) {
     }else{
       games[games.length - 1].players.push(user_id);
     }
+    socket.emit('logged in', {id: user_id, player: games[games.length -1].players.length-1})
   });
 });
 
